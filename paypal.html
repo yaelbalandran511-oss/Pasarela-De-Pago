@@ -17,7 +17,7 @@
     .price { margin:22px 0 5px; color:var(--accent); font-size:27px; font-weight:700; }
     .currency { color:#8392a3; font-size:13px; }
     h3 { margin:24px 0 14px; font-size:15px; color:#31465d; }
-    #paypal-button-container { min-height:45px; }
+    #paypal-button-container, #card-button-container { min-height:45px; }
     #resultado { display:none; margin:16px 0 0; padding:14px; border-radius:12px; font-size:14px; line-height:1.55; white-space:pre-line; }
     #resultado.visible { display:block; }
     #resultado.success { color:#17613f; background:#e9f7ef; border:1px solid #b9e4ca; }
@@ -26,7 +26,7 @@
     @media (max-width:420px) { main { padding:23px 19px; } .product-image { height:205px; } }
   </style>
   <!-- Identificador de prueba sandbox de PayPal. -->
-  <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=MXN&intent=capture&components=buttons&locale=es_MX"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AYceuQYi1vEcUU06X8UhIKEkWoNAad-GyAPbWkoFFfsqkakH6LNsjzUINmS4oor27DGiEFWRR8iN2qO6&currency=MXN&intent=capture&components=buttons&buyer-country=MX&locale=es_MX"></script>
 </head>
 <body>
   <main>
@@ -38,13 +38,14 @@
     <p class="currency">MXN</p>
     <h3>Realizar pago</h3>
     <div id="paypal-button-container"></div>
+    <div id="card-button-container"></div>
     <p id="resultado" role="status" aria-live="polite"></p>
   </main>
   <script>
     const resultado = document.getElementById("resultado");
 
     if (window.paypal && paypal.Buttons) {
-      paypal.Buttons({
+      const paymentOptions = {
         createOrder: function(data, actions) {
           return actions.order.create({
             purchase_units: [{
@@ -68,11 +69,31 @@
           resultado.className = "visible error";
           resultado.textContent = "Ocurrió un error al procesar el pago.";
         }
+      };
+
+      paypal.Buttons({
+        ...paymentOptions,
+        fundingSource: paypal.FUNDING.PAYPAL,
+        style: { layout: "vertical", color: "gold", shape: "rect", label: "paypal", height: 48, tagline: false }
       }).render("#paypal-button-container").catch(function(error) {
         console.error("No se pudo mostrar el botón PayPal:", error);
         resultado.className = "visible error";
         resultado.textContent = "PayPal no pudo iniciar. Revisa el Client ID y tu conexión a Internet.";
       });
+
+      if (paypal.FUNDING.CARD) {
+        const cardButton = paypal.Buttons({
+          ...paymentOptions,
+          fundingSource: paypal.FUNDING.CARD,
+          style: { layout: "vertical", color: "black", shape: "rect", label: "pay", height: 48, tagline: false }
+        });
+
+        if (cardButton.isEligible()) {
+          cardButton.render("#card-button-container").catch(function(error) {
+            console.warn("El botón de tarjeta sandbox no está disponible:", error);
+          });
+        }
+      }
     } else {
       resultado.className = "visible error";
       resultado.textContent = "No se pudo cargar PayPal. Revisa tu conexión a Internet y el Client ID de la aplicación.";
